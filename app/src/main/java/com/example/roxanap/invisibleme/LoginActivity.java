@@ -3,6 +3,7 @@ package com.example.roxanap.invisibleme;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.annotation.TargetApi;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
@@ -31,6 +32,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.firebase.client.AuthData;
 import com.firebase.client.Firebase;
 import com.firebase.client.FirebaseError;
 
@@ -44,6 +46,7 @@ import static android.Manifest.permission.READ_CONTACTS;
  */
 public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<Cursor>, OnClickListener{
 
+    private Firebase firebase = new Firebase("https://invisibleme.firebaseio.com/");
     /**
      * Id to identity READ_CONTACTS permission request.
      */
@@ -81,7 +84,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
             @Override
             public boolean onEditorAction(TextView textView, int id, KeyEvent keyEvent) {
                 if (id == R.id.login || id == EditorInfo.IME_NULL) {
-                    attemptLogin();
+                    //attemptLogin();
                     return true;
                 }
                 return false;
@@ -89,19 +92,14 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
         });
 
         Button mEmailSignInButton = (Button) findViewById(R.id.email_sign_in_button);
-        mEmailSignInButton.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                attemptLogin();
-            }
-        });
+        mEmailSignInButton.setOnClickListener(this);
 
         mLoginFormView = findViewById(R.id.login_form);
         mProgressView = findViewById(R.id.login_progress);
         registerButton = (Button) findViewById(R.id.register_button);
         registerButton.setOnClickListener(this);
         Firebase.setAndroidContext(this);
-        Firebase myFirebaseRef = new Firebase("https://invisibleme.firebaseio.com/");
+
     }
 
     private void populateAutoComplete() {
@@ -153,7 +151,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
      * If there are form errors (invalid email, missing fields, etc.), the
      * errors are presented and no actual login attempt is made.
      */
-    private void attemptLogin() {
+    private void attemptLogin(String email, String password) {
         if (mAuthTask != null) {
             return;
         }
@@ -163,8 +161,6 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
         mPasswordView.setError(null);
 
         // Store values at the time of the login attempt.
-        String email = mUsernameView.getText().toString();
-        String password = mPasswordView.getText().toString();
 
         boolean cancel = false;
         View focusView = null;
@@ -282,20 +278,37 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
 
     @Override
     public void onClick(View v) {
+        final String username = mUsernameView.getText().toString();
+        String password = mPasswordView.getText().toString();
         switch(v.getId()){
             case R.id.register_button:
-                String username = mUsernameView.getText().toString();
-                String password = mPasswordView.getText().toString();
                 Toast.makeText(getApplicationContext(), "Reg",
                         Toast.LENGTH_LONG).show();
                 registerUser(username, password);
+                break;
+            case R.id.email_sign_in_button:
+                //attemptLogin(username,password);
+                firebase.authWithPassword(username, password, new Firebase.AuthResultHandler() {
+                    @Override
+                    public void onAuthenticated(AuthData authData) {
+                        System.out.println("User ID: " + authData.getUid() + ", Provider: " + authData.getProvider());
+                        Toast.makeText(getBaseContext(), "Login success!", Toast.LENGTH_LONG).show();
+                        Intent toHomeActivity = new Intent(getApplicationContext(), HomeActivity.class);
+                        toHomeActivity.putExtra("email",username);
+                        startActivity(toHomeActivity);
+                    }
+                    @Override
+                    public void onAuthenticationError(FirebaseError firebaseError) {
+                        // there was an error
+                        System.out.println("ERROR.........................................");
+                    }
+                });
                 break;
         }
     }
 
     public void registerUser(String username, String password){
-       Firebase ref = new Firebase("https://invisbleme.firebaseio.com");
-        ref.createUser(username,password,new Firebase.ResultHandler() {
+        firebase.createUser(username, password, new Firebase.ResultHandler() {
             @Override
             public void onSuccess() {
                 // user was created
@@ -358,6 +371,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
 
             try {
                 // Simulate network access.
+
                 Thread.sleep(2000);
             } catch (InterruptedException e) {
                 return false;
