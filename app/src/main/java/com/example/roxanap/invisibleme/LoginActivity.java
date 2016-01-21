@@ -3,8 +3,11 @@ package com.example.roxanap.invisibleme;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.annotation.TargetApi;
+import android.content.ComponentName;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
+import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
@@ -32,6 +35,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.roxanap.invisibleme.service.MainService;
 import com.firebase.client.AuthData;
 import com.firebase.client.Firebase;
 import com.firebase.client.FirebaseError;
@@ -45,6 +49,8 @@ import static android.Manifest.permission.READ_CONTACTS;
  * A login screen that offers login via email/password.
  */
 public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<Cursor>, OnClickListener{
+
+    private static final String TAG = LoginActivity.class.getName();
 
     private Firebase firebase;
     /**
@@ -70,6 +76,21 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
     private View mProgressView;
     private View mLoginFormView;
     private Button registerButton;
+
+    private MainService mainService;
+
+    private ServiceConnection serviceConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder binder) {
+            mainService = ((MainService.ServiceBinder) binder).getService();
+            Log.d(TAG, "service connected");
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            mainService = null;
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -98,6 +119,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
         mProgressView = findViewById(R.id.login_progress);
         registerButton = (Button) findViewById(R.id.register_button);
         registerButton.setOnClickListener(this);
+
         Firebase.setAndroidContext(this);
         firebase = new Firebase("https://invisibleme.firebaseio.com/");
 
